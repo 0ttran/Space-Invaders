@@ -22,6 +22,11 @@ public:
     //Controls spaceship with accelerometer
     void OnAcceleration(cocos2d::Acceleration *acc,cocos2d::Event *event);
     
+    //Touch function
+    bool onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event);
+    //void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *event);
+    //void onTouchEnded(cocos2d::Touch *touch, cocos2d::Event *event);
+    
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 };

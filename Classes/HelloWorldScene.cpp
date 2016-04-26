@@ -95,21 +95,19 @@ bool HelloWorld::init()
     shield4->setPosition(visibleSize.width - (visibleSize.width/5 * 4),visibleSize.height * .20);
     this->addChild(shield4, 0);
     
+    //Enable and set listener for accelerometer
     Device::setAccelerometerEnabled(true);
     auto listener = EventListenerAcceleration::create(CC_CALLBACK_2(HelloWorld::OnAcceleration, this));
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
     
+    //Enable touch input
+    auto listener2 = EventListenerTouchOneByOne::create();
+    listener2->setSwallowTouches(true);
+    listener2->onTouchBegan =CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
+    //listener2->onTouchMoved =CC_CALLBACK_2(HelloWorld::onTouchMoved, this);
+    //listener2->onTouchEnded =CC_CALLBACK_2(HelloWorld::onTouchEnded, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener2, this);
     
-    /*
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
-
-    // position the sprite on the center of the screen
-    sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
-
-    // add the sprite as a child to this layer
-    this->addChild(sprite, 0);
-     */
     return true;
 }
 
@@ -120,10 +118,21 @@ void HelloWorld::OnAcceleration(cocos2d::Acceleration *acc, cocos2d::Event *even
     //Increase the position of x
     x += acc->x * visibleSize.width * 0.1;
     
-    //Collision detection
+    //Collision detection with left and right x borders
     if((x < visibleSize.width-20) && (x >= 0))
         spaceship->setPosition(x,visibleSize.height*.1);
     
+}
+
+bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
+    //CCLOG("ON TOUCH: x=%f, y=%f", touch->getLocatison().x, touch->getLocation().y);
+    Size visibleSize = Director::getInstance()->getVisibleSize();
+    Sprite* laser = Sprite::create("res/Player/player_missle.png");
+    laser->setPosition(spaceship->getPosition());
+    this->addChild(laser);
+    laser->runAction(MoveTo::create(0.4, Vec2(spaceship->getPosition().x, visibleSize.height + 50)));
+
+    return true;
 }
 
 void HelloWorld::update(float dt){
