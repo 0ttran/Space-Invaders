@@ -2,9 +2,15 @@
 
 USING_NS_CC;
 
-bool moveLeft, moveRight; //variable to check if user 
-cocos2d::Sprite *spaceship;
-cocos2d::Sprite *shield1, *shield2, *shield3, *shield4;
+#define numShields 4
+#define numEnemies 10
+
+Label* label;
+cocos2d::Sprite *spaceship; //Spaceship of laser
+std::vector<Sprite*> shields;
+std::vector<Sprite*> enemies;
+cocos2d::Sprite *player_laser; //Player projectile laser
+int score;
 
 Scene* HelloWorld::createScene()
 {
@@ -54,15 +60,12 @@ bool HelloWorld::init()
 
     /////////////////////////////
     // 3. add your codes below...
-
-    // add a label shows "Hello World"
     // create and initialize a label
+    score = 0;
     
-    
-    auto label = Label::createWithTTF("SCORE: ", "fonts/space_invaders.ttf", 14);
-    
+    label = Label::createWithTTF("SCORE: " + std::to_string(score), "fonts/space_invaders.ttf", 14);
     // position the label on the center of the screen
-    label->setPosition(Vec2(origin.x + visibleSize.width/2,
+    label->setPosition(Vec2(origin.x + 40,
                             origin.y + visibleSize.height - label->getContentSize().height));
 
     // add the label as a child to this layer
@@ -75,25 +78,17 @@ bool HelloWorld::init()
     this->addChild(spaceship, 0);
     
     //Add initial position of the four shields
-    shield1 = Sprite::create("res/Player/player_shield.png");
-    shield1->setAnchorPoint(Vec2(0,0));
-    shield1->setPosition(visibleSize.width - visibleSize.width/5,visibleSize.height * .20);
-    this->addChild(shield1, 0);
+    for(unsigned i = 1; i < numShields + 1; i++){
+        cocos2d::Sprite* shield = Sprite::create("res/Player/player_shield.png");
+        shield->setAnchorPoint(Vec2(0,0));
+        shield->setPosition(visibleSize.width - visibleSize.width/5 * i+-20,visibleSize.height * .20);
+        shields.push_back(shield);
+        this->addChild(shield, 0);
+    }
     
-    shield2 = Sprite::create("res/Player/player_shield.png");
-    shield2->setAnchorPoint(Vec2(0,0));
-    shield2->setPosition(visibleSize.width - (visibleSize.width/5 * 2),visibleSize.height * .20);
-    this->addChild(shield2, 0);
-
-    shield3 = Sprite::create("res/Player/player_shield.png");
-    shield3->setAnchorPoint(Vec2(0,0));
-    shield3->setPosition(visibleSize.width - (visibleSize.width/5 * 3),visibleSize.height * .20);
-    this->addChild(shield3, 0);
-
-    shield4 = Sprite::create("res/Player/player_shield.png");
-    shield4->setAnchorPoint(Vec2(0,0));
-    shield4->setPosition(visibleSize.width - (visibleSize.width/5 * 4),visibleSize.height * .20);
-    this->addChild(shield4, 0);
+    //Add enemies
+    char const * fp = "res/Enemies/invaderCframe1.png";
+    spawnEnemies(visibleSize.width/2, visibleSize.height/2, numEnemies, fp);
     
     //Enable and set listener for accelerometer
     Device::setAccelerometerEnabled(true);
@@ -104,10 +99,10 @@ bool HelloWorld::init()
     auto listener2 = EventListenerTouchOneByOne::create();
     listener2->setSwallowTouches(true);
     listener2->onTouchBegan =CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
-    //listener2->onTouchMoved =CC_CALLBACK_2(HelloWorld::onTouchMoved, this);
-    //listener2->onTouchEnded =CC_CALLBACK_2(HelloWorld::onTouchEnded, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener2, this);
     
+    //Update
+    this->schedule(schedule_selector(HelloWorld::update));
     return true;
 }
 
@@ -126,18 +121,52 @@ void HelloWorld::OnAcceleration(cocos2d::Acceleration *acc, cocos2d::Event *even
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
     //CCLOG("ON TOUCH: x=%f, y=%f", touch->getLocatison().x, touch->getLocation().y);
+    //if(!laserPass){
     Size visibleSize = Director::getInstance()->getVisibleSize();
     Sprite* laser = Sprite::create("res/Player/player_missle.png");
-    laser->setPosition(spaceship->getPosition());
+    laser->setPosition(spaceship->getPosition().x + spaceship->getContentSize().width/2,
+                       spaceship->getPosition().y + spaceship->getContentSize().height);
     this->addChild(laser);
     laser->runAction(MoveTo::create(0.4, Vec2(spaceship->getPosition().x, visibleSize.height + 50)));
+    score++;
+    //}
 
     return true;
 }
 
 void HelloWorld::update(float dt){
-
+    //Laser collision
+    label->setString("SCORE: " + std::to_string(score));
+    //if(laser->getPosition)
 }
+
+void HelloWorld::spawnEnemies(float h, float w, float numEnemy, const char * filepath){
+    /*
+    cocos2d::Sprite* enemy = Sprite::create(filepath);
+    cocos2d::Sprite* enemy2 = Sprite::create(filepath);
+    //enemy->setAnchorPoint(Vec2(0,0));
+    enemy->setPosition(0,h);
+    enemy->setAnchorPoint(Vec2(0,0));
+    
+    
+    enemy2->setPosition(enemy2->getBoundingBox().size.width + 10,h);
+    enemy2->setAnchorPoint(Vec2(0,0));
+    //enemy->runAction(MoveTo::create(8, Vec2(enemy->getPositionX(), -100)));
+    this->addChild(enemy, 0);
+    this->addChild(enemy2,0);
+    */
+    
+    for(int i = 0; i < numEnemy; i++) {
+        cocos2d::Sprite* enemy = Sprite::create(filepath);
+        //enemy->setAnchorPoint(Vec2(0,0));
+        enemy->setPosition(i*enemy->getBoundingBox().size.width + w,h);
+        enemy->setAnchorPoint(Vec2(0,0));
+        //enemy->runAction(MoveTo::create(8, Vec2(enemy->getPositionX(), -100)));
+        this->addChild(enemy, 0);
+    }
+    
+}
+
 void HelloWorld::menuCloseCallback(Ref* pSender)
 {
     Director::getInstance()->end();

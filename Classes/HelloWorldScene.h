@@ -24,6 +24,10 @@ public:
     
     //Touch function
     bool onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event);
+    
+    //Spawns enemies
+    void spawnEnemies(float h, float w, float numEnemy, const char * filepath);
+    
     //void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *event);
     //void onTouchEnded(cocos2d::Touch *touch, cocos2d::Event *event);
     
