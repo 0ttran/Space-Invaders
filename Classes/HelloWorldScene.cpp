@@ -10,6 +10,7 @@ cocos2d::Sprite *spaceship; //Spaceship of laser
 std::vector<Sprite*> shields;
 std::vector<Sprite*> enemies;
 cocos2d::Sprite *player_laser; //Player projectile laser
+bool laserOut = false;
 int score;
 
 Scene* HelloWorld::createScene()
@@ -101,7 +102,7 @@ bool HelloWorld::init()
     listener2->onTouchBegan =CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener2, this);
     
-    //Update
+    //Add update function to scheduler
     this->schedule(schedule_selector(HelloWorld::update));
     return true;
 }
@@ -111,7 +112,7 @@ void HelloWorld::OnAcceleration(cocos2d::Acceleration *acc, cocos2d::Event *even
     float x = spaceship->getPosition().x; //current x position of spaceship
     
     //Increase the position of x
-    x += acc->x * visibleSize.width * 0.1;
+    x += acc->x * visibleSize.width * 0.05;
     
     //Collision detection with left and right x borders
     if((x < visibleSize.width-20) && (x >= 0))
@@ -121,23 +122,52 @@ void HelloWorld::OnAcceleration(cocos2d::Acceleration *acc, cocos2d::Event *even
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
     //CCLOG("ON TOUCH: x=%f, y=%f", touch->getLocatison().x, touch->getLocation().y);
-    //if(!laserPass){
-    Size visibleSize = Director::getInstance()->getVisibleSize();
-    Sprite* laser = Sprite::create("res/Player/player_missle.png");
-    laser->setPosition(spaceship->getPosition().x + spaceship->getContentSize().width/2,
-                       spaceship->getPosition().y + spaceship->getContentSize().height);
-    this->addChild(laser);
-    laser->runAction(MoveTo::create(0.4, Vec2(spaceship->getPosition().x, visibleSize.height + 50)));
-    score++;
-    //}
+    if(!laserOut){
+        laserOut = true;
+        Size visibleSize = Director::getInstance()->getVisibleSize();
+        player_laser = Sprite::create("res/Player/player_missle.png");
+        player_laser->setPosition(spaceship->getPosition().x + spaceship->getContentSize().width/2,
+                           spaceship->getPosition().y + spaceship->getContentSize().height);
+        this->addChild(player_laser);
+        auto action = MoveTo::create(1.0, Vec2(spaceship->getPosition().x, visibleSize.height + 50));
+        auto callback = CallFunc::create( CC_CALLBACK_0( HelloWorld::setLaser, this ) );
+        auto sequence = Sequence::create(action, callback, NULL);
+        player_laser->runAction(sequence);
+        //laser->runAction(MoveTo::create(1.0, Vec2(spaceship->getPosition().x, visibleSize.height + 50)));
+        score++;
+    }
 
     return true;
 }
 
+//Updates various events in the game
 void HelloWorld::update(float dt){
-    //Laser collision
+    
+    //Player laser collision
+    if(laserOut){ //Checks if a laser is currently out
+        Rect laserBoundBox = Rect(player_laser->getPosition().x - (player_laser->getContentSize().width/2),
+                                  player_laser->getPosition().y - (player_laser->getContentSize().height/2),
+                                  player_laser->getContentSize().width,
+                                  player_laser->getContentSize().height);
+    
+    
+        for(unsigned i = 0; i < numShields; i++){
+            Rect shieldToCheck = Rect(shields.at(i)->getPosition().x,
+                                      shields.at(i)->getPosition().y,
+                                      shields.at(i)->getContentSize().width,
+                                      shields.at(i)->getContentSize().height);
+            
+            if(laserBoundBox.intersectsRect(shieldToCheck)){
+                this->removeChild(player_laser, true);
+                laserOut = false;
+                break;
+            }
+            
+        }
+    }
+    
+    //Update score
     label->setString("SCORE: " + std::to_string(score));
-    //if(laser->getPosition)
 }
 
 void HelloWorld::spawnEnemies(float h, float w, float numEnemy, const char * filepath){
@@ -165,6 +195,10 @@ void HelloWorld::spawnEnemies(float h, float w, float numEnemy, const char * fil
         this->addChild(enemy, 0);
     }
     
+}
+
+void HelloWorld::setLaser(){
+    laserOut = false;
 }
 
 void HelloWorld::menuCloseCallback(Ref* pSender)

@@ -5,8 +5,6 @@
 
 class HelloWorld : public cocos2d::Layer
 {
-private:
-    float _shipPointsPerSecY;
     
 public:
     static cocos2d::Scene* createScene();
@@ -27,6 +25,9 @@ public:
     
     //Spawns enemies
     void spawnEnemies(float h, float w, float numEnemy, const char * filepath);
+    
+    //Function that is used to control the number of lasers produced
+    void setLaser();
     
     //void onTouchMoved(cocos2d::Touch *touch, cocos2d::Event *event);
     //void onTouchEnded(cocos2d::Touch *touch, cocos2d::Event *event);
