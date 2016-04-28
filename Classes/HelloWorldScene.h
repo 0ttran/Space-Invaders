@@ -40,6 +40,9 @@ protected:
     //Controls enemy movement, takes in type argument, 1=left, 2=right, 3=down
     void moveEnemy(int type);
     
+    //Controls direction of enemy movment
+    void changeDirection(int type);
+    
     // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 };

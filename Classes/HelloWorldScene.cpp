@@ -7,7 +7,10 @@ USING_NS_CC;
 Label* label;
 cocos2d::Sprite *player_laser; //Player projectile laser
 bool laserOut = false;
-int score, numShields = 4;;
+int score, numShields = 4, enemyMoveInd = 0;
+std::vector<int> movInd, indxcnt (numEnemies*5, 0);
+std::vector<cocos2d::Sprite*> enemies_moving;
+
 
 Scene* HelloWorld::createScene()
 {
@@ -27,6 +30,12 @@ Scene* HelloWorld::createScene()
 // initializes game variables and events
 bool HelloWorld::init()
 {
+    //Indexes used for enemy movement
+    movInd.push_back(1);
+    movInd.push_back(3);
+    movInd.push_back(2);
+    movInd.push_back(3);
+    
     //////////////////////////////
     // 1. super init first
     if ( !Layer::init() )
@@ -92,8 +101,19 @@ bool HelloWorld::init()
     spawnEnemies(visibleSize.width/2 - 40, visibleSize.height/2, numEnemies, fp2);
     spawnEnemies(visibleSize.width/2 - 60, visibleSize.height/2, numEnemies, fp3);
     spawnEnemies(visibleSize.width/2 - 80, visibleSize.height/2, numEnemies, fp3);
-    moveEnemy(1);
-    moveEnemy(3);
+    
+    enemies_moving = enemies;
+    
+    int c = 0;
+    for(unsigned i = 0; i < numEnemies; i++){
+        if(c == numEnemies-1)
+            c = 0;
+        indxcnt.at(i) = c;
+        c++;
+    }
+    //Move enemy
+    //moveEnemy(2);
+
     //Enable and set listener for accelerometer
     Device::setAccelerometerEnabled(true);
     auto listener = EventListenerAcceleration::create(CC_CALLBACK_2(HelloWorld::OnAcceleration, this));
@@ -148,9 +168,16 @@ bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
 void HelloWorld::update(float dt){
     
     //Move enemies
-    for(unsigned i = 0; i < enemies.size(); i++){
-        //enemies.at(i)->setPosition(<#const cocos2d::Vec2 &pos#>)
+    if(enemies.at(enemies.size()-1)->getNumberOfRunningActions() < 1){
+        
+        moveEnemy(movInd.at(enemyMoveInd));
+        CCLOG("ACTIONS: %i: ", movInd.at(enemyMoveInd));
+        enemyMoveInd++;
+        if(enemyMoveInd == movInd.size())
+            enemyMoveInd = 0;
     }
+     
+    
     
     //Player laser collision
     if(laserOut){ //Checks if a laser is currently out
@@ -228,20 +255,37 @@ void HelloWorld::setLaser(){
 
 //Used in a sequence after FadeOut is called
 void HelloWorld::removeEnemy(Sprite* s, int i){
+    enemies_moving.at(i) = NULL;
     this->removeChild(s,true);
     enemies.erase(enemies.begin()+i);
 }
 
 //Controls enemy movement, takes in type argument, 1=left, 2=right, 3=down
 void HelloWorld::moveEnemy(int type){
+    Size visibleSize = Director::getInstance()->getVisibleSize();
     int seperator = 0;
     if(type == 1){
         for(unsigned i = 0; i < enemies.size(); i++){
             if((i % numEnemies) == 0)
                 seperator = 0;
-            auto action = MoveTo::create(10, Vec2(0 + (30*seperator),enemies.at(i)->getPosition().y));
-            auto sequence = Sequence::create(action, NULL);
-            enemies.at(i)->runAction(sequence);
+            if(enemies.at(i) != NULL){ //if not dead enemies
+                auto action = MoveTo::create(10, Vec2(0 + (30*seperator),enemies.at(i)->getPosition().y));
+                auto sequence = Sequence::create(action, NULL);
+                enemies.at(i)->runAction(sequence);
+            }
+            seperator++;
+            
+        }
+    }
+    else if(type == 2){
+        for(unsigned i = 0; i < enemies.size(); i++){
+            if((i % numEnemies) == 0)
+                seperator = 0;
+            if(enemies.at(i) != NULL){ //if not dead enemies
+                auto action = MoveTo::create(10, Vec2(visibleSize.width + (30*seperator) - visibleSize.width/2,enemies.at(i)->getPosition().y));
+                auto sequence = Sequence::create(action, NULL);
+                enemies.at(i)->runAction(sequence);
+            }
             seperator++;
         }
     }
@@ -249,10 +293,12 @@ void HelloWorld::moveEnemy(int type){
         for(unsigned i = 0; i < enemies.size(); i++){
             if((i % numEnemies) == 0)
                 seperator = 0;
-            auto action = MoveTo::create(2, Vec2(enemies.at(i)->getPosition().x,
-                                             enemies.at(i)->getPosition().y - enemies.at(i)->getContentSize().height));
-            auto sequence = Sequence::create(action, NULL);
-            enemies.at(i)->runAction(sequence);
+            if(enemies.at(i) != NULL){ //if not dead enemies
+                auto action = MoveTo::create(2, Vec2(enemies.at(i)->getPosition().x,
+                                                 enemies.at(i)->getPosition().y - enemies.at(i)->getContentSize().height));
+                auto sequence = Sequence::create(action, NULL);
+                enemies.at(i)->runAction(sequence);
+            }
             seperator++;
         }
     }
