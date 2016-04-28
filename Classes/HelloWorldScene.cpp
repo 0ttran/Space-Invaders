@@ -2,16 +2,12 @@
 
 USING_NS_CC;
 
-#define numShields 4
 #define numEnemies 10
 
 Label* label;
-cocos2d::Sprite *spaceship; //Spaceship of laser
-std::vector<Sprite*> shields;
-std::vector<Sprite*> enemies;
 cocos2d::Sprite *player_laser; //Player projectile laser
 bool laserOut = false;
-int score;
+int score, numShields = 4;;
 
 Scene* HelloWorld::createScene()
 {
@@ -28,7 +24,7 @@ Scene* HelloWorld::createScene()
     return scene;
 }
 
-// on "init" you need to initialize your instance
+// initializes game variables and events
 bool HelloWorld::init()
 {
     //////////////////////////////
@@ -66,7 +62,7 @@ bool HelloWorld::init()
     
     label = Label::createWithTTF("SCORE: " + std::to_string(score), "fonts/space_invaders.ttf", 14);
     // position the label on the center of the screen
-    label->setPosition(Vec2(origin.x + 40,
+    label->setPosition(Vec2(origin.x + 50,
                             origin.y + visibleSize.height - label->getContentSize().height));
 
     // add the label as a child to this layer
@@ -82,21 +78,28 @@ bool HelloWorld::init()
     for(unsigned i = 1; i < numShields + 1; i++){
         cocos2d::Sprite* shield = Sprite::create("res/Player/player_shield.png");
         shield->setAnchorPoint(Vec2(0,0));
-        shield->setPosition(visibleSize.width - visibleSize.width/5 * i+-20,visibleSize.height * .20);
+        shield->setPosition(visibleSize.width - visibleSize.width/5 * i - 20,visibleSize.height * 0.20);
         shields.push_back(shield);
         this->addChild(shield, 0);
     }
     
-    //Add enemies
-    char const * fp = "res/Enemies/invaderCframe1.png";
-    spawnEnemies(visibleSize.width/2, visibleSize.height/2, numEnemies, fp);
-    
+    //Add 5 rows of enemies
+    char const * fp1 = "res/Enemies/invaderCframe1.png";
+    char const * fp2 = "res/Enemies/invaderBframe1.png";
+    char const * fp3 = "res/Enemies/invaderAframe1.png";
+    spawnEnemies(visibleSize.width/2, visibleSize.height/2, numEnemies, fp1);
+    spawnEnemies(visibleSize.width/2 - 20, visibleSize.height/2, numEnemies, fp2);
+    spawnEnemies(visibleSize.width/2 - 40, visibleSize.height/2, numEnemies, fp2);
+    spawnEnemies(visibleSize.width/2 - 60, visibleSize.height/2, numEnemies, fp3);
+    spawnEnemies(visibleSize.width/2 - 80, visibleSize.height/2, numEnemies, fp3);
+    moveEnemy(1);
+    moveEnemy(3);
     //Enable and set listener for accelerometer
     Device::setAccelerometerEnabled(true);
     auto listener = EventListenerAcceleration::create(CC_CALLBACK_2(HelloWorld::OnAcceleration, this));
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
     
-    //Enable touch input
+    //Enable touch input and set listener
     auto listener2 = EventListenerTouchOneByOne::create();
     listener2->setSwallowTouches(true);
     listener2->onTouchBegan =CC_CALLBACK_2(HelloWorld::onTouchBegan, this);
@@ -104,6 +107,7 @@ bool HelloWorld::init()
     
     //Add update function to scheduler
     this->schedule(schedule_selector(HelloWorld::update));
+    
     return true;
 }
 
@@ -121,20 +125,20 @@ void HelloWorld::OnAcceleration(cocos2d::Acceleration *acc, cocos2d::Event *even
 }
 
 bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
-    //CCLOG("ON TOUCH: x=%f, y=%f", touch->getLocatison().x, touch->getLocation().y);
+    
+    //Checks if there is a laser already out, 1 laser at a time
     if(!laserOut){
         laserOut = true;
         Size visibleSize = Director::getInstance()->getVisibleSize();
         player_laser = Sprite::create("res/Player/player_missle.png");
         player_laser->setPosition(spaceship->getPosition().x + spaceship->getContentSize().width/2,
-                           spaceship->getPosition().y + spaceship->getContentSize().height);
+                                  spaceship->getPosition().y + spaceship->getContentSize().height);
         this->addChild(player_laser);
-        auto action = MoveTo::create(1.0, Vec2(spaceship->getPosition().x, visibleSize.height + 50));
+        auto action = MoveTo::create(0.7, Vec2(spaceship->getPosition().x, visibleSize.height + 50));
         auto callback = CallFunc::create( CC_CALLBACK_0( HelloWorld::setLaser, this ) );
         auto sequence = Sequence::create(action, callback, NULL);
+        sequence->setTag(21);
         player_laser->runAction(sequence);
-        //laser->runAction(MoveTo::create(1.0, Vec2(spaceship->getPosition().x, visibleSize.height + 50)));
-        score++;
     }
 
     return true;
@@ -143,6 +147,11 @@ bool HelloWorld::onTouchBegan(cocos2d::Touch *touch, cocos2d::Event *event){
 //Updates various events in the game
 void HelloWorld::update(float dt){
     
+    //Move enemies
+    for(unsigned i = 0; i < enemies.size(); i++){
+        //enemies.at(i)->setPosition(<#const cocos2d::Vec2 &pos#>)
+    }
+    
     //Player laser collision
     if(laserOut){ //Checks if a laser is currently out
         Rect laserBoundBox = Rect(player_laser->getPosition().x - (player_laser->getContentSize().width/2),
@@ -150,19 +159,45 @@ void HelloWorld::update(float dt){
                                   player_laser->getContentSize().width,
                                   player_laser->getContentSize().height);
     
-    
+        //Collision with shields
         for(unsigned i = 0; i < numShields; i++){
             Rect shieldToCheck = Rect(shields.at(i)->getPosition().x,
                                       shields.at(i)->getPosition().y,
                                       shields.at(i)->getContentSize().width,
                                       shields.at(i)->getContentSize().height);
             
+            //If intersection found, delete shield
             if(laserBoundBox.intersectsRect(shieldToCheck)){
-                this->removeChild(player_laser, true);
+                numShields--;
                 laserOut = false;
+                player_laser->stopActionByTag(21);
+                this->removeChild(player_laser,true);
+                this->removeChild(shields.at(i), true);
+                shields.erase(shields.begin()+i);
                 break;
             }
+        }
+        
+        //Collision with enemies
+        for(unsigned i = 0; i < enemies.size(); i++){
+            Rect enemyToCheck = Rect(enemies.at(i)->getPosition().x,
+                                     enemies.at(i)->getPosition().y,
+                                     enemies.at(i)->getContentSize().width,
+                                     enemies.at(i)->getContentSize().height);
             
+            //If intersection found, change texture of sprite and 'animate' death with fade
+            if(laserBoundBox.intersectsRect(enemyToCheck)){
+                FadeOut *fade = FadeOut::create(0.3);
+                auto callback = CallFunc::create( CC_CALLBACK_0( HelloWorld::removeEnemy, this, enemies.at(i), i));
+                auto sequence = Sequence::create(fade, callback, NULL);
+                enemies.at(i)->setTexture("res/Enemies/invader_explosion.png");
+                enemies.at(i)->runAction(sequence);
+                laserOut = false;
+                player_laser->stopActionByTag(21);
+                this->removeChild(player_laser,true);
+                score += 10;
+                break;
+            }
         }
     }
     
@@ -170,35 +205,57 @@ void HelloWorld::update(float dt){
     label->setString("SCORE: " + std::to_string(score));
 }
 
+//Spawns enemy given height, width, number of enemies and the filepath of the picture
 void HelloWorld::spawnEnemies(float h, float w, float numEnemy, const char * filepath){
-    /*
-    cocos2d::Sprite* enemy = Sprite::create(filepath);
-    cocos2d::Sprite* enemy2 = Sprite::create(filepath);
-    //enemy->setAnchorPoint(Vec2(0,0));
-    enemy->setPosition(0,h);
-    enemy->setAnchorPoint(Vec2(0,0));
     
+    Size visibleSize = Director::getInstance()->getVisibleSize();
     
-    enemy2->setPosition(enemy2->getBoundingBox().size.width + 10,h);
-    enemy2->setAnchorPoint(Vec2(0,0));
-    //enemy->runAction(MoveTo::create(8, Vec2(enemy->getPositionX(), -100)));
-    this->addChild(enemy, 0);
-    this->addChild(enemy2,0);
-    */
-    
-    for(int i = 0; i < numEnemy; i++) {
+    //Loops through number of enemies (per row) and spawns them
+    for(int i = 1; i <= numEnemy; i++) {
         cocos2d::Sprite* enemy = Sprite::create(filepath);
-        //enemy->setAnchorPoint(Vec2(0,0));
-        enemy->setPosition(i*enemy->getBoundingBox().size.width + w,h);
         enemy->setAnchorPoint(Vec2(0,0));
-        //enemy->runAction(MoveTo::create(8, Vec2(enemy->getPositionX(), -100)));
+        enemy->setPosition(enemy->getBoundingBox().size.width + (30*i) + visibleSize.width/4,h);
         this->addChild(enemy, 0);
+        enemies.push_back(enemy);
     }
-    
 }
 
+//Deletes laser and sets bool for next laser
 void HelloWorld::setLaser(){
+    this->removeChild(player_laser,true);
     laserOut = false;
+}
+
+//Used in a sequence after FadeOut is called
+void HelloWorld::removeEnemy(Sprite* s, int i){
+    this->removeChild(s,true);
+    enemies.erase(enemies.begin()+i);
+}
+
+//Controls enemy movement, takes in type argument, 1=left, 2=right, 3=down
+void HelloWorld::moveEnemy(int type){
+    int seperator = 0;
+    if(type == 1){
+        for(unsigned i = 0; i < enemies.size(); i++){
+            if((i % numEnemies) == 0)
+                seperator = 0;
+            auto action = MoveTo::create(10, Vec2(0 + (30*seperator),enemies.at(i)->getPosition().y));
+            auto sequence = Sequence::create(action, NULL);
+            enemies.at(i)->runAction(sequence);
+            seperator++;
+        }
+    }
+    else if(type == 3){
+        for(unsigned i = 0; i < enemies.size(); i++){
+            if((i % numEnemies) == 0)
+                seperator = 0;
+            auto action = MoveTo::create(2, Vec2(enemies.at(i)->getPosition().x,
+                                             enemies.at(i)->getPosition().y - enemies.at(i)->getContentSize().height));
+            auto sequence = Sequence::create(action, NULL);
+            enemies.at(i)->runAction(sequence);
+            seperator++;
+        }
+    }
 }
 
 void HelloWorld::menuCloseCallback(Ref* pSender)
